@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kartu Ucapan Cinta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+  <!-- Optional libs -->
+  <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    :root{
+      --bg-1:#0f1020;
+      --bg-2:#25132e;
+      --accent:#ff477e;
+      --accent-2:#ffd166;
+      --glass: rgba(255,255,255,.08);
+      --border: rgba(255,255,255,.18);
+      --text:#f7f7fb;
+      --muted:#c7c7d4;
+      --card-w: min(92vw, 720px);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Poppins, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif;
+      color:var(--text); background: radial-gradient(1200px 1200px at 20% 10%, #2a1742 0%, var(--bg-2) 40%, var(--bg-1) 100%);
+      overflow-x:hidden;
+    }
+    .scene{
+      position:relative; min-height:100vh; display:grid; place-items:center; padding:24px; overflow:hidden;
+    }
+    /* Floating hearts background */
+    .hearts{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+    .heart{ position:absolute; width:14px; height:14px; transform:rotate(45deg); animation: floatUp linear infinite; opacity:.75 }
+    .heart:before, .heart:after{ content:""; position:absolute; width:14px; height:14px; background:inherit; border-radius:50% }
+    .heart:before{ left:-7px; } .heart:after{ top:-7px; }
+    @keyframes floatUp{ to{ transform:translateY(-110vh) rotate(45deg)} }
+
+    /* Card */
+    .card{
+      width:var(--card-w); border-radius:28px; background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border:1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,.35);
+      padding:28px clamp(18px,3vw,36px); position:relative; isolation:isolate;
+      transform: translateY(8px) scale(.98); opacity:0; transition: all .7s cubic-bezier(.2,.8,.2,1);
+    }
+    .card.show{ transform: translateY(0) scale(1); opacity:1 }
+    .ribbon{
+      position:absolute; top:18px; right:-18px; background:linear-gradient(135deg, var(--accent), #ff6b9a);
+      color:white; padding:10px 22px; font-weight:700; box-shadow:0 8px 20px rgba(0,0,0,.25);
+      transform:rotate(12deg); border-radius:10px; letter-spacing:.5px;
+    }
+    .title{ font-family:"Great Vibes", cursive; font-size: clamp(28px, 5vw, 52px); margin: 10px 0 6px; color:var(--accent-2)}
+    .subtitle{ font-weight:600; letter-spacing:.4px; margin:0 0 8px; color:#ffe8a1 }
+    .tofrom{ margin:8px 0 18px; color:var(--muted) }
+    .tofrom b{ color:#fff }
+    .msg{
+      font-size: clamp(16px, 2.4vw, 18px); line-height:1.8; background:var(--glass); border:1px solid var(--border);
+      padding:18px 16px; border-radius:16px; min-height:120px; position:relative;
+    }
+    .msg p{ margin:0 0 10px }
+    .msg .caret{ display:inline-block; width:10px; height:1.1em; vertical-align:bottom; background:var(--accent); animation:blink 1s steps(1) infinite; }
+    @keyframes blink{ 50%{ opacity:.2 } }
+
+    .actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:18px }
+    .btn{
+      appearance:none; border:none; border-radius:12px; padding:10px 14px; font-weight:600; cursor:pointer;
+      background: #ffffff10; color:var(--text); border:1px solid var(--border); backdrop-filter: blur(6px);
+      transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); background:#ffffff14 }
+    .btn:active{ transform: translateY(0) scale(.98) }
+
+    .open-wrap{ display:grid; place-items:center; gap:16px; text-align:center; }
+    .open-title{ font-weight:700; letter-spacing:.6px }
+    .open-btn{
+      font-size:18px; padding:14px 22px; border-radius:999px; background:linear-gradient(90deg, var(--accent), #ff8bb3);
+      box-shadow:0 12px 26px rgba(255,71,126,.35); border:none; color:white; cursor:pointer; font-weight:800; letter-spacing:.6px;
+    }
+    .open-btn:hover{ filter:brightness(1.05) }
+
+    /* Settings */
+    .settings{ position:fixed; bottom:20px; right:20px; z-index:10 }
+    .fab{ width:52px; height:52px; border-radius:50%; border:none; display:grid; place-items:center; font-size:22px; cursor:pointer; color:white;
+      background:linear-gradient(135deg, #2d2b52, #62337c); box-shadow: 0 10px 28px rgba(0,0,0,.35); border:1px solid var(--border) }
+
+    .modal{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); padding:20px; z-index:20 }
+    .modal.show{ display:grid }
+    .panel{
+      width:min(92vw, 680px); background:#17172a; border:1px solid var(--border); border-radius:20px; padding:18px; box-shadow:0 12px 36px rgba(0,0,0,.5);
+    }
+    .panel h3{ margin:6px 6px 12px; font-size:20px }
+    .grid{ display:grid; grid-template-columns: 1fr; gap:12px }
+    @media (min-width:720px){ .grid{ grid-template-columns: 1fr 1fr } }
+    label{ display:block; font-size:13px; color:#b9b9c8; margin:0 0 6px }
+    input[type="text"], textarea, input[type="date"], input[type="url"], select{
+      width:100%; border-radius:10px; border:1px solid #2c2c46; background:#0f1020; color:#fff; padding:10px 12px; font:inherit;
+    }
+    textarea{ min-height:120px; resize:vertical }
+    .panel .row{ display:flex; gap:10px; justify-content:flex-end; margin-top:12px }
+
+    /* Toast */
+    .toast{ position:fixed; bottom:92px; right:20px; background:#111222; color:#fff; border:1px solid var(--border);
+      padding:10px 12px; border-radius:12px; font-size:14px; opacity:0; transform:translateY(10px); transition: all .3s ease; z-index:30 }
+    .toast.show{ opacity:1; transform:translateY(0) }
+
+    /* Share Badge */
+    .badge{ position:absolute; top:18px; left:18px; background:#ffffff10; border:1px solid var(--border); border-radius:999px; padding:6px 10px; font-size:12px; color:#ddd }
+  </style>
+</head>
+<body>
+  <div class="scene" id="scene">
+    <div class="hearts" id="hearts"></div>
+
+    <div class="open-wrap" id="opener">
+      <div style="font-size:64px">💌</div>
+      <div class="open-title">Sebuah kartu kecil untuk orang spesialmu ✨</div>
+      <button class="open-btn" id="openCard">Buka Kartu</button>
+    </div>
+
+    <article class="card" id="card" aria-live="polite" aria-label="Kartu Ucapan Cinta" role="region">
+      <span class="badge" id="dateBadge">—</span>
+      <div class="ribbon">With ❤️</div>
+      <h1 class="title">Untuk <span id="toName">Kamu</span></h1>
+      <h3 class="subtitle" id="occasion">Selamat Hari Spesial!</h3>
+      <div class="tofrom">Dari <b id="fromName">Aku</b></div>
+
+      <section class="msg" id="message" aria-label="Pesan"></section>
+
+      <div class="actions">
+        <button class="btn" id="btnConfetti">Konfeti 🎉</button>
+        <button class="btn" id="btnReplay">Putar Ulang Pesan ⏪</button>
+        <button class="btn" id="btnDownload" title="Simpan sebagai gambar">Unduh Kartu ⬇️</button>
+        <button class="btn" id="btnShare">Bagikan 🔗</button>
+        <button class="btn" id="btnMusic">Musik: Off 🔇</button>
+      </div>
+    </article>
+
+    <!-- Settings Floating Button -->
+    <div class="settings">
+      <button class="fab" id="openSettings" title="Sesuaikan kartu">⚙️</button>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="modal">
+      <div class="panel">
+        <h3>Sesuaikan Kartu</h3>
+        <div class="grid">
+          <div>
+            <label>Nama Penerima</label>
+            <input type="text" id="inpTo" placeholder="Mis. Sayangku" />
+          </div>
+          <div>
+            <label>Nama Pengirim</label>
+            <input type="text" id="inpFrom" placeholder="Mis. Aku" />
+          </div>
+          <div>
+            <label>Judul / Momen</label>
+            <input type="text" id="inpOccasion" placeholder="Anniversary ke-3" />
+          </div>
+          <div>
+            <label>Tanggal</label>
+            <input type="date" id="inpDate" />
+          </div>
+          <div>
+            <label>Pesan</label>
+            <textarea id="inpMsg" placeholder="Tulis pesan manis di sini..."></textarea>
+          </div>
+          <div>
+            <label>URL Musik (opsional, .mp3)</label>
+            <input type="url" id="inpMusic" placeholder="https://.../lagu.mp3" />
+          </div>
+          <div>
+            <label>Tema</label>
+            <select id="inpTheme">
+              <option value="love">Cinta (default)</option>
+              <option value="sunset">Senja Hangat</option>
+              <option value="ocean">Laut Tenang</option>
+              <option value="forest">Hutan Malam</option>
+            </select>
+          </div>
+          <div>
+            <label>Warna Aksen</label>
+            <input type="text" id="inpAccent" placeholder="#ff477e" />
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnReset">Reset</button>
+          <button class="btn" id="btnSave">Simpan</button>
+          <button class="btn" id="btnClose">Tutup</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">Tersimpan ✅</div>
+  </div>
+
+  <audio id="audio" preload="none"></audio>
+
+  <script>
+    // --- Utilities ---
+    const $ = sel => document.querySelector(sel);
+    const storageKey = 'giftCard.v1';
+
+    const defaultData = {
+      to: 'Kamu',
+      from: 'Aku',
+      occasion: 'Selamat Hari Spesial! ✨',
+      date: new Date().toISOString().slice(0,10),
+      msg: `Terima kasih sudah menjadi rumah paling hangat untuk hatiku.
+Aku mencintaimu—hari ini, esok, dan seterusnya. 💖`,
+      music: '',
+      theme: 'love',
+      accent: '#ff477e'
+    };
+
+    function save(data){ localStorage.setItem(storageKey, JSON.stringify(data)); }
+    function load(){ try{ return JSON.parse(localStorage.getItem(storageKey)) || {...defaultData} }catch{ return {...defaultData} } }
+
+    function setTheme(theme){
+      const root = document.documentElement;
+      const themes = {
+        love: {bg1:'#0f1020', bg2:'#25132e'},
+        sunset: {bg1:'#2a1a1a', bg2:'#5a2f2f'},
+        ocean: {bg1:'#0b1c2b', bg2:'#0a3d62'},
+        forest: {bg1:'#0d1b1e', bg2:'#112d2d'}
+      };
+      const t = themes[theme] || themes.love;
+      root.style.setProperty('--bg-1', t.bg1);
+      root.style.setProperty('--bg-2', t.bg2);
+    }
+
+    function toast(msg){ const el=$('#toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), 1600); }
+
+    // Hearts background
+    function spawnHearts(){
+      const wrap = $('#hearts'); wrap.innerHTML = '';
+      const colors = ['#ff6b9a','#ffd166','#6ecbff','#c792ea','#7af7c6'];
+      for(let i=0;i<30;i++){
+        const span = document.createElement('span');
+        span.className = 'heart';
+        const size = 10 + Math.random()*14;
+        const left = Math.random()*100;
+        const dur = 12 + Math.random()*12;
+        const delay = Math.random()*-dur; // start spread
+        span.style.left = left+'vw';
+        span.style.bottom = '-20px';
+        span.style.width = span.style.height = size+'px';
+        span.style.background = colors[i%colors.length];
+        span.style.animationDuration = dur+'s';
+        span.style.animationDelay = delay+'s';
+        wrap.appendChild(span);
+      }
+    }
+
+    // Typewriter
+    async function typeMessage(text){
+      const box = $('#message');
+      box.innerHTML = '';
+      const lines = text.split(/\n/);
+      for(const [idx,line] of lines.entries()){
+        const p = document.createElement('p'); box.appendChild(p);
+        for(const ch of line){
+          await new Promise(r=>setTimeout(r, 18 + Math.random()*20));
+          p.textContent += ch;
+        }
+        if(idx < lines.length-1) await new Promise(r=>setTimeout(r, 230));
+      }
+      const caret = document.createElement('span'); caret.className='caret'; box.appendChild(caret);
+      setTimeout(()=> caret.remove(), 1600);
+    }
+
+    // Confetti (with graceful fallback)
+    function burst(){
+      if(window.confetti){
+        const count = 200, defaults = {spread: 80, startVelocity: 22, ticks: 200, gravity: 0.8};
+        function fire(particleRatio, opts){ confetti(Object.assign({}, defaults, opts, {particleCount: Math.floor(count * particleRatio)})); }
+        fire(0.25, {spread: 26, startVelocity: 35});
+        fire(0.2, {spread: 60});
+        fire(0.35, {spread: 100, decay:.92, scalar: 0.9});
+        fire(0.1, {spread: 120, startVelocity: 25});
+        fire(0.1, {spread: 120, startVelocity: 45});
+      }else{
+        // emoji fallback
+        const box = document.createElement('div');
+        box.style.position='fixed'; box.style.inset='0'; box.style.pointerEvents='none';
+        for(let i=0;i<80;i++){
+          const s=document.createElement('div'); s.textContent = ['💖','✨','🎉','💐'][i%4];
+          s.style.position='absolute'; s.style.left=Math.random()*100+'vw'; s.style.top='-20px';
+          s.style.fontSize=(16+Math.random()*24)+'px'; s.style.transition='transform 2.2s ease, opacity 2.2s ease';
+          box.appendChild(s);
+          requestAnimationFrame(()=>{
+            s.style.transform=`translateY(${100+Math.random()*120}vh) rotate(${(Math.random()*720-360)}deg)`;
+            s.style.opacity='0';
+          });
+        }
+        document.body.appendChild(box); setTimeout(()=>box.remove(), 2400);
+      }
+    }
+
+    // Share link
+    async function shareCard(){
+      const url = location.href;
+      const data = load();
+      const text = `Untuk ${data.to} — ${data.occasion}`;
+      try{
+        if(navigator.share){ await navigator.share({title:'Kartu Ucapan', text, url}); }
+        else{ await navigator.clipboard.writeText(url); toast('Tautan disalin 📋'); }
+      }catch{}
+    }
+
+    // Download image via html2canvas (optional)
+    async function downloadCard(){
+      const el = $('#card');
+      if(!window.html2canvas){ toast('Fitur unduh memerlukan koneksi (html2canvas).'); return; }
+      const canvas = await html2canvas(el, {scale:2, backgroundColor:null});
+      canvas.toBlob(blob=>{
+        const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='kartu-cinta.png'; a.click();
+        setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+      });
+    }
+
+    // Audio
+    function setupAudio(src){
+        const audio = $('#audio');
+        audio.src = 'lagu.mp3'; // file lokal di folder HTML
+        audio.loop = true;
+    }
+
+
+    function playPause(){
+      const audio = $('#audio');
+      const btn = $('#btnMusic');
+      if(!audio.src){ toast('Tambahkan URL musik di pengaturan.'); return; }
+      if(audio.paused){ audio.play().then(()=> btn.textContent='Musik: On 🔊').catch(()=> toast('Tidak bisa memutar audio.')) }
+      else{ audio.pause(); btn.textContent='Musik: Off 🔇' }
+    }
+
+    // Render data
+    function render(data){
+      setTheme(data.theme);
+      document.documentElement.style.setProperty('--accent', data.accent || '#ff477e');
+      $('#toName').textContent = data.to || 'Kamu';
+      $('#fromName').textContent = data.from || 'Aku';
+      $('#occasion').textContent = data.occasion || 'Hari Spesial';
+      $('#dateBadge').textContent = new Date(data.date||Date.now()).toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
+      setupAudio(data.music);
+      typeMessage(data.msg || '');
+    }
+
+    // Modal logic
+    function openModal(){
+      const data = load();
+      $('#inpTo').value = data.to; $('#inpFrom').value = data.from; $('#inpOccasion').value = data.occasion;
+      $('#inpDate').value = data.date; $('#inpMsg').value = data.msg; $('#inpMusic').value = data.music || '';
+      $('#inpTheme').value = data.theme; $('#inpAccent').value = data.accent;
+      $('#modal').classList.add('show');
+    }
+    function closeModal(){ $('#modal').classList.remove('show'); }
+    function resetAll(){ localStorage.removeItem(storageKey); toast('Dikembalikan ke default'); render({...defaultData}); closeModal(); }
+    function saveAll(){
+      const data = {
+        to: $('#inpTo').value.trim() || 'Kamu',
+        from: $('#inpFrom').value.trim() || 'Aku',
+        occasion: $('#inpOccasion').value.trim() || 'Selamat Hari Spesial! ✨',
+        date: $('#inpDate').value || new Date().toISOString().slice(0,10),
+        msg: $('#inpMsg').value.trim() || defaultData.msg,
+        music: $('#inpMusic').value.trim(),
+        theme: $('#inpTheme').value,
+        accent: $('#inpAccent').value.trim() || '#ff477e'
+      };
+      save(data); render(data); toast('Tersimpan ✅'); closeModal();
+    }
+
+    // Open Flow
+    function openCard(){
+      $('#opener').style.display='none';
+      $('#card').classList.add('show');
+      burst();
+    }
+
+    // Events
+    window.addEventListener('DOMContentLoaded', () => {
+      spawnHearts();
+      const data = load(); render(data);
+      // If first time, show opener; else show card immediately
+      if(!localStorage.getItem(storageKey+'__opened')){
+        $('#card').classList.remove('show');
+      } else {
+        $('#opener').style.display='none'; $('#card').classList.add('show');
+      }
+      // Buttons
+      $('#openCard').addEventListener('click', ()=>{ localStorage.setItem(storageKey+'__opened','1'); openCard(); });
+      $('#btnConfetti').addEventListener('click', burst);
+      $('#btnReplay').addEventListener('click', ()=> typeMessage(load().msg));
+      $('#btnDownload').addEventListener('click', downloadCard);
+      $('#btnShare').addEventListener('click', shareCard);
+      $('#btnMusic').addEventListener('click', playPause);
+      // Settings
+      $('#openSettings').addEventListener('click', openModal);
+      $('#btnClose').addEventListener('click', closeModal);
+      $('#btnReset').addEventListener('click', resetAll);
+      $('#btnSave').addEventListener('click', saveAll);
+      // Accessibility: close modal on Esc / outside click
+      $('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') closeModal(); });
+      window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+      // Resize hearts on rotate
+      window.addEventListener('resize', () => { clearTimeout(window.__hRT); window.__hRT=setTimeout(spawnHearts, 200); });
+    });
+  </script>
+</body>
+</html>
